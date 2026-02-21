@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Upload, File, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_URL } from '@/config';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
     };
 
     const endpoint = toolEndpointMap[toolName] || 'process';
-    const url = `/api/tools/${endpoint}`;
+    const url = `${API_URL}/api/tools/${endpoint}`;
     
     console.log(`Processing ${toolName} at ${url}`);
 
