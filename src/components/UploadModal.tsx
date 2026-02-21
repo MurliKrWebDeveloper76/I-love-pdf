@@ -16,6 +16,8 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [compressionLevel, setCompressionLevel] = useState<string>('screen');
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -68,6 +70,10 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
     files.forEach(file => {
       formData.append('file', file);
     });
+    
+    if (toolName === 'Compress PDF') {
+      formData.append('level', compressionLevel);
+    }
 
     // Map tool names to API endpoints
     const toolEndpointMap: Record<string, string> = {
@@ -260,6 +266,50 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
                       >
                         Remove all files
                       </button>
+                    </div>
+                  )}
+
+                  {toolName === 'Compress PDF' && !isProcessing && files.length > 0 && (
+                    <div className="mt-6 w-full max-w-md bg-gray-50 p-4 rounded-xl">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Compression Level</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => setCompressionLevel('screen')}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border transition-all",
+                            compressionLevel === 'screen' 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-white text-gray-600 border-gray-200 hover:border-primary/50"
+                          )}
+                        >
+                          Extreme
+                          <span className="block text-[10px] opacity-80">Low Quality</span>
+                        </button>
+                        <button
+                          onClick={() => setCompressionLevel('ebook')}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border transition-all",
+                            compressionLevel === 'ebook' 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-white text-gray-600 border-gray-200 hover:border-primary/50"
+                          )}
+                        >
+                          Recommended
+                          <span className="block text-[10px] opacity-80">Good Quality</span>
+                        </button>
+                        <button
+                          onClick={() => setCompressionLevel('printer')}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border transition-all",
+                            compressionLevel === 'printer' 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-white text-gray-600 border-gray-200 hover:border-primary/50"
+                          )}
+                        >
+                          High
+                          <span className="block text-[10px] opacity-80">Best Quality</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
