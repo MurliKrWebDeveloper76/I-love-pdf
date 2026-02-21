@@ -41,9 +41,16 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Production static file serving would go here
-    // For this environment, we primarily focus on dev mode with Vite middleware
+    // Production static file serving
     app.use(express.static('dist'));
+    
+    // Handle SPA routing - return index.html for all non-API routes
+    app.get('*', (req, res) => {
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
