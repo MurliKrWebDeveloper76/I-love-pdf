@@ -16,7 +16,7 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [compressionLevel, setCompressionLevel] = useState<string>('screen');
+  const [cropOption, setCropOption] = useState<string>('auto');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -73,6 +73,10 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
     
     if (toolName === 'Compress PDF') {
       formData.append('level', compressionLevel);
+    }
+    
+    if (toolName === 'Crop PDF') {
+      formData.append('mode', cropOption);
     }
 
     // Map tool names to API endpoints
@@ -308,6 +312,38 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
                         >
                           High
                           <span className="block text-[10px] opacity-80">Best Quality</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {toolName === 'Crop PDF' && !isProcessing && files.length > 0 && (
+                    <div className="mt-6 w-full max-w-md bg-gray-50 p-4 rounded-xl">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Crop Mode</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setCropOption('auto')}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border transition-all",
+                            cropOption === 'auto' 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-white text-gray-600 border-gray-200 hover:border-primary/50"
+                          )}
+                        >
+                          Auto Crop
+                          <span className="block text-[10px] opacity-80">Remove Margins</span>
+                        </button>
+                        <button
+                          onClick={() => setCropOption('center')}
+                          className={cn(
+                            "px-3 py-2 text-sm rounded-lg border transition-all",
+                            cropOption === 'center' 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-white text-gray-600 border-gray-200 hover:border-primary/50"
+                          )}
+                        >
+                          Center Crop
+                          <span className="block text-[10px] opacity-80">Focus Content</span>
                         </button>
                       </div>
                     </div>

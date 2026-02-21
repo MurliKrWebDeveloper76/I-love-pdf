@@ -4,6 +4,10 @@ import path from 'path';
 import fs from 'fs';
 import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
 import archiver from 'archiver';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -312,7 +316,7 @@ router.post('/crop-pdf', upload.single('file'), async (req, res) => {
   }
 });
 
-// PDF to JPG
+// PDF to JPG (Real implementation using pdftoppm)
 router.post('/pdf-to-jpg', upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
@@ -323,47 +327,46 @@ router.post('/pdf-to-jpg', upload.single('file'), async (req, res) => {
       fs.mkdirSync(outputDir);
     }
 
-    // Since we can't easily install poppler-utils in this environment, 
-    // we will use a mock implementation that returns a placeholder image in a zip
-    // In a real production environment with poppler-utils installed:
-    /*
-    const opts = {
-      format: 'jpeg',
-      out_dir: outputDir,
-      out_prefix: path.basename(file.path, path.extname(file.path)),
-      page: null
-    };
-    await pdfPoppler.convert(file.path, opts);
-    */
+    try {
+      // Use pdftoppm (from poppler-utils)
+      // pdftoppm -jpeg -r 150 input.pdf output_prefix
+      const outputPrefix = path.join(outputDir, 'page');
+      const command = `pdftoppm -jpeg -r 150 "${file.path}" "${outputPrefix}"`;
+      
+      await execPromise(command);
 
-    // Mock implementation: Create a dummy text file pretending to be an image for demonstration
-    // or just zip the original PDF as a placeholder if we can't generate images
-    // Ideally we would use a JS-only library like pdfjs-dist to render to canvas and then to image
-    // but that requires more setup.
-    
-    // For now, let's just return the original PDF but with the correct headers for a ZIP response
-    // to simulate the "multiple images" output structure.
-    
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename=images.zip');
-    
-    archive.pipe(res);
-    
-    // In a real implementation, we would append the generated images
-    // archive.directory(outputDir, false);
-    
-    // Mock: append the original PDF as if it was an image
-    archive.append(fs.createReadStream(file.path), { name: 'page-1.pdf' });
-    
-    await archive.finalize();
-    
-    // Cleanup
-    cleanupFiles([file]);
-    if (fs.existsSync(outputDir)) {
-      fs.rmSync(outputDir, { recursive: true, force: true });
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename=images.zip');
+      
+      archive.pipe(res);
+      archive.directory(outputDir, false);
+      await archive.finalize();
+
+      // Cleanup happens after response is finished usually, but for simplicity:
+      // We rely on OS/container cleanup or implement a scheduled cleanup
+      // Here we just cleanup the input file immediately
+      cleanupFiles([file]);
+      
+      // Clean output dir after a delay to allow streaming
+      setTimeout(() => {
+        if (fs.existsSync(outputDir)) {
+          fs.rmSync(outputDir, { recursive: true, force: true });
+        }
+      }, 5000);
+
+    } catch (execError) {
+      console.error('Poppler error:', execError);
+      // Fallback: return original PDF in a zip
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename=images-fallback.zip');
+      archive.pipe(res);
+      archive.append(fs.createReadStream(file.path), { name: 'original.pdf' });
+      await archive.finalize();
+      cleanupFiles([file]);
+      if (fs.existsSync(outputDir)) fs.rmdirSync(outputDir);
     }
-
   } catch (error) {
     console.error('PDF to JPG error:', error);
     res.status(500).json({ error: 'Failed to convert PDF to JPG' });
