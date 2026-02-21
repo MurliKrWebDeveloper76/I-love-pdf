@@ -113,8 +113,16 @@ export function UploadModal({ isOpen, onClose, toolName }: UploadModalProps) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Processing failed');
+        let errorMessage = 'Processing failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // If response is not JSON (e.g. HTML error page from proxy/server crash), use status text
+          console.error('Non-JSON error response:', await response.text());
+          errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       // Handle file download
